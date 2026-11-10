@@ -511,6 +511,8 @@
         let isRegenerating = {};
         let regenErrors = {};
         let regenNotes = {};
+        // Bagian yang masih memakai versi lama setelah Buat Ulang berantai (ditampilkan sebagai peringatan)
+        let staleParts = [];
 
         // Pub State
         let pubPlatforms = ['TikTok', 'Instagram Reels'];
@@ -584,7 +586,7 @@
             phasePubText = phaseGuideText = "";
             sceneImagePrompts = []; scenePrompts = []; sceneEndPrompts = [];
             backupSceneImagePrompts = []; backupScenePrompts = [];
-            isRegenerating = {}; regenErrors = {}; regenNotes = {};
+            isRegenerating = {}; regenErrors = {}; regenNotes = {}; staleParts = [];
             retakeState = EMPTY_RETAKE();
         }
 
@@ -2903,6 +2905,7 @@ Output langsung teks (tanpa markdown).`;
             else if (target.startsWith('se-')) sceneEndPrompts[parseInt(target.split('-')[1]) - 1] = t;
             else if (target.startsWith('s-')) scenePrompts[parseInt(target.split('-')[1]) - 1] = t;
 
+            staleParts = staleParts.filter(x => x !== target);
             refreshEarlyReady();
             saveToHistory();
         }
@@ -2931,7 +2934,6 @@ Output langsung teks (tanpa markdown).`;
                     showConfirm("Perhatian", cascadeMsg, async () => {
                         currentSessionId++;
                         const confirmSession = currentSessionId;
-                        const isT2I = isI2VMode();
                         const preTargets = [];
                         if (target === 'und') preTargets.push('p1');
                         if (target === 'und' || target === 'p1') {
@@ -2939,28 +2941,27 @@ Output langsung teks (tanpa markdown).`;
                             if (phaseCharSheetText) preTargets.push('charsheet');
                             if (phaseLocRefText) preTargets.push('locref');
                         }
-                        preTargets.forEach(t => isRegenerating[t] = true);
+                        // Rencana kamera dibuat dari naskah, jadi selalu ikut dibuat ulang
+                        if (phaseCameraPlanText || phase2ResultText) preTargets.push('cam');
+                        // Urutan per scene sama seperti pembuatan awal: gambar awal, gambar akhir, lalu video
+                        const sceneTargets = [];
                         for (let i = 1; i <= totalScenes; i++) {
-                            if (isT2I) isRegenerating[`si-${i}`] = true;
-                            isRegenerating[`s-${i}`] = true;
+                            if (isI2VMode()) sceneTargets.push(`si-${i}`);
+                            if (isStartEndMode()) sceneTargets.push(`se-${i}`);
+                            sceneTargets.push(`s-${i}`);
                         }
+                        const all = preTargets.concat(sceneTargets);
+                        all.forEach(t => { isRegenerating[t] = true; regenErrors[t] = null; });
                         renderResultState();
-                        for (const t of preTargets) {
+                        for (const t of all) {
                             try { await executeRegen(t); if (confirmSession !== currentSessionId) return; isRegenerating[t] = false; }
                             catch(e) { if (confirmSession !== currentSessionId) return; isRegenerating[t] = false; regenErrors[t] = e.message; }
                             renderResultState();
                         }
-                        for (let i = 1; i <= totalScenes; i++) {
-                            if (isT2I) {
-                                try { await executeRegen(`si-${i}`); if (confirmSession !== currentSessionId) return; isRegenerating[`si-${i}`] = false; }
-                                catch(e) { if (confirmSession !== currentSessionId) return; isRegenerating[`si-${i}`] = false; regenErrors[`si-${i}`] = e.message; }
-                            }
-                            try { await executeRegen(`s-${i}`); if (confirmSession !== currentSessionId) return; isRegenerating[`s-${i}`] = false; }
-                            catch(e) { if (confirmSession !== currentSessionId) return; isRegenerating[`s-${i}`] = false; regenErrors[`s-${i}`] = e.message; }
-                            renderResultState();
-                        }
-                        const w = document.getElementById('warn-regen-mot-qc');
-                        if (w) w.classList.remove('hidden');
+                        // Bagian ringkasan masih dari versi lama: tampilkan peringatan sampai dibuat ulang
+                        staleParts = [['mot', phaseMotionBridgeText], ['qc', phaseQcText], ['ost', phaseOstText], ['broll', phaseBrollText], ['pub', phasePubText], ['guide', phaseGuideText]]
+                            .filter(x => x[1]).map(x => x[0]);
+                        renderResultState();
                     }, () => {});
                 } else if (target.startsWith('s-') || target.startsWith('si-')) {
                     const warnEl = document.getElementById(`warn-regen-${target}`);
@@ -3234,6 +3235,13 @@ Output langsung teks (tanpa markdown).`;
                 </div>`;
         }
         
+        const STALE_NAMES = { mot: 'Motion Bridge', qc: 'Quality Control', ost: 'Teks Layar', broll: 'B-roll', pub: 'Paket Publikasi', guide: 'Panduan Produksi' };
+        function staleWarnHtml() {
+            const list = staleParts.filter(k => !isRegenerating[k]);
+            if (!list.length || isProcessingQueue) return '';
+            return `<div class="mb-6 bg-warning-100 border border-gold-400 rounded-2xl p-4 text-sm text-brown-800">⚠️ Naskah dan scene sudah dibuat ulang, tetapi <strong>${list.map(k => STALE_NAMES[k]).join(', ')}</strong> masih dari versi lama. Tekan <strong>Buat Ulang</strong> di kartu ${list.length > 1 ? 'masing-masing' : 'tersebut'} agar cocok dengan naskah baru.${list.includes('mot') ? ' Motion Bridge ada di bagian "Lihat Motion Bridge".' : ''}</div>`;
+        }
+
         function resumeProject() {
             if (isProcessingQueue) return;
             if (undQuestions.length > 0) { renderQuestionsView(); return; }
@@ -3252,7 +3260,7 @@ Output langsung teks (tanpa markdown).`;
             
             let charLocHtml = "";
             if (usesProductPhoto()) {
-                charLocHtml += `<div class="bg-gold-100 p-4 rounded-2xl border border-gold-400 mb-6 text-sm text-brown-800">📦 <strong>Foto produk asli:</strong> unggah foto produkmu${getProductName() ? ' (' + escapeHTML(getProductName()) + ')' : ''} sebagai gambar referensi di ${getToolNameId()} pada setiap scene yang menampilkan produk. Gunakan foto yang terang dan jelas, sebaiknya dengan latar polos.</div>`;
+                charLocHtml += `<div class="bg-gold-100 p-4 rounded-2xl border border-gold-400 mb-6 text-sm text-brown-800">📦 <strong>Foto produk asli:</strong> unggah foto produkmu${getProductName() ? ', yaitu ' + escapeHTML(getProductName()) + ',' : ''} sebagai gambar referensi di ${getToolNameId()} pada setiap scene yang menampilkan produk. Gunakan foto yang terang dan jelas, sebaiknya dengan latar polos.</div>`;
             }
             if (usesOwnPhoto()) {
                 charLocHtml += `<div class="bg-gold-100 p-4 rounded-2xl border border-gold-400 mb-6 text-sm text-brown-800">📷 <strong>Foto karakter sendiri:</strong> unggah fotomu (atau foto orang dewasa yang sudah memberi izin) sebagai gambar referensi di ${getToolNameId()} untuk setiap scene yang menampilkannya. Wajah karakter utama diambil dari foto tersebut.</div>`;
@@ -3479,7 +3487,8 @@ Output langsung teks (tanpa markdown).`;
                     
                     ${scenesHtml}
                     ${retakeHtml}
-                    
+                    ${staleWarnHtml()}
+
                     ${phaseMotionBridgeText || isRegenerating['mot'] || regenErrors['mot'] ? `
                         <details class="mb-6 group" ${isRegenerating['mot'] || regenErrors['mot'] || motionBridgeOpen ? 'open' : ''} ontoggle="motionBridgeOpen = this.open">
                             <summary class="list-none cursor-pointer select-none bg-cream-50 hover:bg-cream-100 border border-cream-300 rounded-2xl px-5 py-4 min-h-[56px] flex items-center justify-between gap-3 font-bold text-brown-800">
