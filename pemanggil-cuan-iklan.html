@@ -1,34 +1,86 @@
 <!DOCTYPE html>
-<!-- SUGIMATION AI - Pemanggil Cuan Iklan. Tempel file ini di Gemini Canvas. Aplikasinya selalu diambil dari GitHub (cabang main), jadi pembaruan otomatis ikut tanpa membuat link baru. -->
+<!-- SUGIMATION AI - Pemanggil Cuan Iklan V2. Tempel file ini di Gemini Canvas. Aplikasinya selalu diambil dari GitHub (cabang main), jadi pembaruan otomatis ikut tanpa membuat link baru.
+     V2: halaman Canvas tidak diganti (tanpa document.write, penyebab layar berkedip); isi aplikasi dimasukkan bagian demi bagian, dan pemanggil hanya berjalan sekali. -->
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SUGIMATION AI - Cuan Iklan</title>
-<style>
-  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #FAF3E3; color: #3B2A1A; font-family: system-ui, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
-  .spin { width: 40px; height: 40px; border: 4px solid #E9DCC2; border-top-color: #C9A24D; border-radius: 50%; animation: s 0.8s linear infinite; margin: 0 auto 16px; }
-  @keyframes s { to { transform: rotate(360deg); } }
-  button { margin-top: 16px; background: #C9A24D; color: #3B2A1A; border: 0; border-radius: 14px; padding: 12px 24px; font-weight: 700; font-size: 16px; }
+<style id="pemanggil-gaya">
+  #pemanggil { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #FAF3E3; color: #3B2A1A; font-family: system-ui, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+  #pemanggil .spin { width: 40px; height: 40px; border: 4px solid #E9DCC2; border-top-color: #C9A24D; border-radius: 50%; animation: pemanggil-s 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes pemanggil-s { to { transform: rotate(360deg); } }
+  #pemanggil button { margin-top: 16px; background: #C9A24D; color: #3B2A1A; border: 0; border-radius: 14px; padding: 12px 24px; font-weight: 700; font-size: 16px; }
 </style>
 </head>
 <body>
-<div id="msg"><div class="spin"></div><p>Memuat SUGIMATION AI...</p></div>
+<div id="pemanggil"><div><div class="spin"></div><p>Memuat SUGIMATION AI...</p></div></div>
 <script>
-  const SUMBER = "https://raw.githubusercontent.com/elhabsyihauto-ai/Sugimation/main/cuan-iklan.html";
+(function () {
+  // Pengaman: pemanggil hanya berjalan sekali
+  if (window.__sugimationDimuat) return;
+  window.__sugimationDimuat = true;
+
+  var SUMBER = "https://raw.githubusercontent.com/elhabsyihauto-ai/Sugimation/main/cuan-iklan.html";
+
+  function tampilGagal(pesan) {
+    var box = document.getElementById("pemanggil");
+    if (!box) return;
+    box.innerHTML = "<div><p><b>Aplikasi gagal dimuat.</b><br>Periksa koneksi internet, lalu coba lagi.</p><p style='font-size:12px;opacity:.7'>" + String(pesan).replace(/</g, "&lt;") + "</p><button id='pemanggil-ulang'>Coba lagi</button></div>";
+    document.getElementById("pemanggil-ulang").onclick = function () {
+      box.innerHTML = "<div><div class='spin'></div><p>Memuat SUGIMATION AI...</p></div>";
+      muat();
+    };
+  }
+
+  // Jalankan script aplikasi satu per satu, berurutan
+  function jalankanScript(lama) {
+    return new Promise(function (selesai, gagal) {
+      var s = document.createElement("script");
+      for (var i = 0; i < lama.attributes.length; i++) s.setAttribute(lama.attributes[i].name, lama.attributes[i].value);
+      if (lama.src) { s.onload = selesai; s.onerror = function () { gagal(new Error("Gagal memuat " + lama.src)); }; }
+      else s.textContent = lama.textContent;
+      document.body.appendChild(s);
+      if (!lama.src) selesai();
+    });
+  }
+
   async function muat() {
-    document.getElementById("msg").innerHTML = '<div class="spin"></div><p>Memuat SUGIMATION AI...</p>';
     try {
-      // ?v= membuat versi terbaru selalu terambil, bukan salinan lama
-      const res = await fetch(SUMBER + "?v=" + Date.now(), { cache: "no-store" });
+      var res = await fetch(SUMBER + "?v=" + Date.now(), { cache: "no-store" });
       if (!res.ok) throw new Error("Kode " + res.status);
-      const html = await res.text();
-      document.open(); document.write(html); document.close();
+      var doc = new DOMParser().parseFromString(await res.text(), "text/html");
+
+      // 1) Judul, bahasa, dan gaya tampilan aplikasi
+      document.title = doc.title || document.title;
+      document.documentElement.lang = doc.documentElement.lang || "id";
+      Array.prototype.forEach.call(doc.head.querySelectorAll("style, link[rel=stylesheet]"), function (el) {
+        document.head.appendChild(document.importNode(el, true));
+      });
+
+      // 2) Isi halaman (tanpa script dulu)
+      var scripts = Array.prototype.slice.call(doc.body.querySelectorAll("script"));
+      scripts.forEach(function (s) { s.parentNode.removeChild(s); });
+      Array.prototype.forEach.call(doc.body.attributes, function (a) { document.body.setAttribute(a.name, a.value); });
+      var isi = document.createDocumentFragment();
+      Array.prototype.forEach.call(doc.body.childNodes, function (n) { isi.appendChild(document.importNode(n, true)); });
+      document.body.innerHTML = "";
+      document.body.appendChild(isi);
+      var gayaPemanggil = document.getElementById("pemanggil-gaya");
+      if (gayaPemanggil) gayaPemanggil.remove();
+
+      // 3) Script aplikasi
+      window.onload = null;
+      for (var i = 0; i < scripts.length; i++) await jalankanScript(scripts[i]);
+
+      // 4) Halaman Canvas sudah selesai dimuat, jadi jalankan pembuka aplikasi secara manual
+      if (typeof window.onload === "function") { var buka = window.onload; window.onload = null; buka(); }
     } catch (e) {
-      document.getElementById("msg").innerHTML = "<p><b>Aplikasi gagal dimuat.</b><br>Periksa koneksi internet, lalu coba lagi.</p><p style='font-size:12px;opacity:.7'>" + String(e.message || e) + "</p><button onclick='muat()'>Coba lagi</button>";
+      tampilGagal(e.message || e);
     }
   }
   muat();
+})();
 </script>
 </body>
 </html>
