@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage();
-  await p.goto('file:///home/user/Sugimation/hiburan.html'); await p.waitForFunction(() => typeof getAutoChecks === 'function');
+  await p.goto(process.argv[2] || 'file:///home/user/Sugimation/hiburan.html'); await p.waitForFunction(() => typeof getAutoChecks === 'function');
   const r = await p.evaluate(() => {
     const run = (sc, sel = {}) => { selections = Object.assign({ 1: 'Cerita.', 2: 'Horor', 5: 'Narasi', 7: 'Sinematik mulus seperti film' }, sel); totalScenes = 1; scenePrompts = [sc]; phaseOstText = ''; phase1ResultText = 'Master Character: Rani.'; return getAutoChecks().filter(x => /sadis/.test(x)); };
     return {
