@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<!-- Sugi Studio AI - Uji Gambar V1 (12 Nov 2026). File uji kecil: cek apakah aplikasi Canvas bisa membuat gambar (Character Sheet dari foto + gambar scene). Tidak mengubah Hiburan, Cuan Iklan, atau Edukasi. -->
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sugi Studio AI - Uji Gambar V1</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:linear-gradient(135deg,#FAF3E3,#F3E7CC);color:#3B2A1A;min-height:100vh}
+header{background:#FFFDF8;border-bottom:1px solid #E6D5B8;padding:14px 16px;position:sticky;top:0;z-index:10}
+.logo{font-family:Georgia,serif;font-weight:700;font-size:24px}
+.logo .g{color:#9A7425}
+.badge{display:inline-block;background:#C9A24D;color:#2A1D11;font-size:11px;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:top}
+.sub{font-size:11px;letter-spacing:.2em;font-weight:700;color:#9A7425;text-transform:uppercase;margin-top:2px}
+main{max-width:720px;margin:0 auto;padding:16px}
+.card{background:#FFFDF8;border:1px solid #E6D5B8;border-radius:20px;padding:16px;margin-bottom:16px}
+h2{font-family:Georgia,serif;font-size:20px;margin:0 0 6px}
+p.note{font-size:14px;color:#7A6244;margin:0 0 12px}
+button{font:inherit;font-weight:700;border:none;border-radius:14px;padding:12px 16px;min-height:48px;cursor:pointer;background:#C9A24D;color:#2A1D11;width:100%;margin-top:8px}
+button.sec{background:#FAF3E3;border:1px solid #E6D5B8}
+button:disabled{opacity:.5;cursor:not-allowed}
+textarea,input[type=text]{width:100%;font:inherit;font-size:15px;border:2px solid #E6D5B8;border-radius:12px;padding:10px;background:#FFFDF8;color:#3B2A1A}
+label{display:block;font-weight:700;font-size:14px;margin:10px 0 6px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.img{width:100%;border-radius:14px;border:1px solid #E6D5B8;margin-top:10px;background:#FAF3E3}
+.status{font-size:14px;margin-top:8px;padding:8px 10px;border-radius:10px;background:#FAF3E3}
+.ok{background:#EFF4E6;color:#55721B}
+.bad{background:#FCECE9;color:#A64632}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-top:10px;font-weight:400}
+.chk input{width:20px;height:20px;margin-top:2px;flex-shrink:0}
+pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:#FAF3E3;border-radius:12px;padding:10px;max-height:260px;overflow:auto}
+.thumb{width:110px;border-radius:10px;border:1px solid #E6D5B8;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">SUGI <span class="g">STUDIO</span><span class="badge">AI</span></div>
+  <div class="sub">Uji Gambar V1</div>
+</header>
+<main>
+  <div class="card">
+    <h2>Cara pakai</h2>
+    <p class="note">Jalankan langkah 1 sampai 4 berurutan. Setelah selesai, tekan <strong>Salin Laporan</strong> di paling bawah dan kirim hasilnya ke Claude. Laporan berisi model mana yang berhasil dan pesan errornya, bukan fotomu.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. Tes koneksi model gambar</h2>
+    <p class="note">Aplikasi mencoba beberapa model gambar satu per satu dengan gambar sederhana (secangkir kopi), lalu memakai model pertama yang berhasil.</p>
+    <button id="b1" onclick="testModels()">🔌 Mulai tes model</button>
+    <div id="s1" class="status">Belum dijalankan.</div>
+    <img id="i1" class="img" style="display:none" alt="Hasil tes">
+  </div>
+
+  <div class="card">
+    <h2>2. Unggah foto wajah</h2>
+    <p class="note">Wajah jelas dari depan, terang, tanpa filter, hanya satu orang. Foto diperkecil otomatis sebelum dikirim.</p>
+    <input type="file" id="foto" accept="image/*" onchange="loadPhoto(this)">
+    <img id="thumb" class="thumb" style="display:none" alt="Foto">
+    <label class="chk"><input type="checkbox" id="izin"> Foto ini adalah saya, atau orang dewasa (18+) yang sudah memberi izin.</label>
+    <div id="s2" class="status">Belum ada foto.</div>
+  </div>
+
+  <div class="card">
+    <h2>3. Buat Character Sheet dari foto</h2>
+    <label for="baju">Pakaian tokoh (boleh dikosongkan)</label>
+    <input type="text" id="baju" placeholder="Contoh: kemeja koko putih, sarung kotak hijau, peci hitam">
+    <button id="b3" onclick="makeSheet()" disabled>🎨 Buat Character Sheet</button>
+    <div id="s3" class="status">Selesaikan langkah 1 dan 2 dulu.</div>
+    <img id="i3" class="img" style="display:none" alt="Character Sheet">
+    <button id="d3" class="sec" style="display:none" onclick="download('i3','character-sheet')">⬇️ Unduh Character Sheet</button>
+  </div>
+
+  <div class="card">
+    <h2>4. Buat 1 gambar scene dari Character Sheet</h2>
+    <label for="scene">Gambaran scene</label>
+    <textarea id="scene" rows="3">The person from the reference image sits on a wooden porch bench of a simple Indonesian house in the late afternoon, holding a glass of tea, warm natural sunlight, photorealistic, vertical 9:16, no text.</textarea>
+    <button id="b4" onclick="makeScene()" disabled>🖼️ Buat gambar scene</button>
+    <div id="s4" class="status">Selesaikan langkah 3 dulu.</div>
+    <img id="i4" class="img" style="display:none" alt="Gambar scene">
+    <button id="d4" class="sec" style="display:none" onclick="download('i4','scene-1')">⬇️ Unduh gambar scene</button>
+  </div>
+
+  <div class="card">
+    <h2>Laporan uji</h2>
+    <pre id="log"></pre>
+    <button class="sec" onclick="copyLog(this)">📋 Salin Laporan</button>
+  </div>
+</main>
+
+<script>
+// Daftar model yang dicoba (urutan = prioritas). Ganti di sini jika nama model berubah.
+const GEMINI_IMAGE_MODELS = ["gemini-2.5-flash-image-preview", "gemini-2.5-flash-image", "gemini-3-pro-image-preview"];
+const IMAGEN_MODELS = ["imagen-4.0-generate-001", "imagen-3.0-generate-002"];
+const API = "https://generativelanguage.googleapis.com/v1beta/models/";
+const apiKey = "";
+
+let workModel = null;      // model Gemini gambar yang bisa menerima foto
+let workImagen = null;     // model Imagen (hanya teks)
+let photo = null;          // {mime, data}
+let sheet = null;          // {mime, data}
+
+function log(t) {
+  const el = document.getElementById('log');
+  el.textContent += '[' + new Date().toLocaleTimeString('id-ID') + '] ' + t + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+function setStatus(id, text, kind) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'status' + (kind ? ' ' + kind : '');
+}
+function showImg(id, img) {
+  const el = document.getElementById(id);
+  el.src = 'data:' + img.mime + ';base64,' + img.data;
+  el.style.display = 'block';
+}
+function short(t) { return String(t || '').replace(/\s+/g, ' ').slice(0, 300); }
+
+// Panggil model Gemini gambar (bisa menerima gambar acuan)
+async function callGeminiImage(model, text, images, withRatio) {
+  const parts = [{ text }];
+  (images || []).forEach(im => parts.push({ inlineData: { mimeType: im.mime, data: im.data } }));
+  const generationConfig = { responseModalities: ['TEXT', 'IMAGE'] };
+  if (withRatio) generationConfig.imageConfig = { aspectRatio: '9:16' };
+  const res = await fetch(API + model + ':generateContent?key=' + apiKey, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts }], generationConfig })
+  });
+  const body = await res.text();
+  if (!res.ok) throw new Error(res.status + ' ' + short(body));
+  const data = JSON.parse(body);
+  const cand = data.candidates && data.candidates[0];
+  const out = cand && cand.content && (cand.content.parts || []).find(p => p.inlineData || p.inline_data);
+  if (!out) {
+    const why = (cand && cand.finishReason) || (data.promptFeedback && data.promptFeedback.blockReason) || 'tanpa gambar';
+    const txt = cand && cand.content && (cand.content.parts || []).map(p => p.text || '').join(' ');
+    throw new Error('Tidak ada gambar (' + why + ') ' + short(txt));
+  }
+  const d = out.inlineData || out.inline_data;
+  return { mime: d.mimeType || d.mime_type || 'image/png', data: d.data };
+}
+async function callGeminiImageSafe(model, text, images) {
+  try { return await callGeminiImage(model, text, images, true); }
+  catch (e) {
+    if (/^400/.test(e.message)) { log(model + ': ulang tanpa pengaturan rasio (' + short(e.message).slice(0, 120) + ')'); return await callGeminiImage(model, text, images, false); }
+    throw e;
+  }
+}
+// Panggil Imagen (hanya teks, tanpa gambar acuan)
+async function callImagen(model, text) {
+  const res = await fetch(API + model + ':predict?key=' + apiKey, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instances: [{ prompt: text }], parameters: { sampleCount: 1, aspectRatio: '9:16' } })
+  });
+  const body = await res.text();
+  if (!res.ok) throw new Error(res.status + ' ' + short(body));
+  const data = JSON.parse(body);
+  const p = data.predictions && data.predictions[0];
+  if (!p || !p.bytesBase64Encoded) throw new Error('Tidak ada gambar ' + short(body));
+  return { mime: p.mimeType || 'image/png', data: p.bytesBase64Encoded };
+}
+
+async function testModels() {
+  const b = document.getElementById('b1'); b.disabled = true;
+  setStatus('s1', 'Sedang mencoba model...');
+  const prompt = 'A cup of hot coffee on a wooden table near a window, morning light, photorealistic, no text.';
+  let first = null;
+  for (const m of GEMINI_IMAGE_MODELS) {
+    const t0 = Date.now();
+    try {
+      const img = await callGeminiImageSafe(m, prompt, []);
+      log('BERHASIL ' + m + ' (' + Math.round((Date.now() - t0) / 1000) + ' detik, ukuran data ' + Math.round(img.data.length * 0.75 / 1024) + ' KB)');
+      if (!workModel) { workModel = m; first = img; }
+    } catch (e) { log('GAGAL ' + m + ': ' + e.message); }
+  }
+  for (const m of IMAGEN_MODELS) {
+    const t0 = Date.now();
+    try {
+      const img = await callImagen(m, prompt);
+      log('BERHASIL ' + m + ' (' + Math.round((Date.now() - t0) / 1000) + ' detik)');
+      if (!workImagen) workImagen = m;
+      if (!first) first = img;
+    } catch (e) { log('GAGAL ' + m + ': ' + e.message); }
+  }
+  if (first) showImg('i1', first);
+  if (workModel) {
+    setStatus('s1', '✅ Model gambar yang bisa memakai foto: ' + workModel + (workImagen ? ' · Imagen: ' + workImagen : ''), 'ok');
+  } else if (workImagen) {
+    setStatus('s1', '⚠️ Hanya Imagen yang jalan (' + workImagen + '). Imagen tidak bisa memakai foto, jadi langkah 3-4 tidak bisa diuji.', 'bad');
+  } else {
+    setStatus('s1', '❌ Tidak ada model gambar yang bisa dipakai di sini. Salin laporan di bawah dan kirim ke Claude.', 'bad');
+  }
+  b.disabled = false;
+  updateButtons();
+}
+
+function loadPhoto(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const max = 1024, scale = Math.min(1, max / Math.max(im.width, im.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(im.width * scale); c.height = Math.round(im.height * scale);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      const url = c.toDataURL('image/jpeg', 0.9);
+      photo = { mime: 'image/jpeg', data: url.split(',')[1] };
+      const t = document.getElementById('thumb'); t.src = url; t.style.display = 'block';
+      setStatus('s2', '✅ Foto siap (' + c.width + 'x' + c.height + ' piksel).', 'ok');
+      log('Foto dimuat ' + c.width + 'x' + c.height);
+      updateButtons();
+    };
+    im.onerror = () => setStatus('s2', '❌ Foto tidak bisa dibaca. Coba foto lain (JPG atau PNG).', 'bad');
+    im.src = reader.result;
+  };
+  reader.readAsDataURL(f);
+}
+document.getElementById('izin').addEventListener('change', updateButtons);
+
+function updateButtons() {
+  const izin = document.getElementById('izin').checked;
+  document.getElementById('b3').disabled = !(workModel && photo && izin);
+  document.getElementById('b4').disabled = !(workModel && sheet);
+  if (workModel && photo && !izin) setStatus('s3', 'Centang pernyataan izin di langkah 2 dulu.');
+  else if (workModel && photo && izin && !sheet) setStatus('s3', 'Siap. Tekan tombol di atas.');
+}
+
+async function makeSheet() {
+  const b = document.getElementById('b3'); b.disabled = true;
+  setStatus('s3', 'Sedang membuat Character Sheet (bisa 10-40 detik)...');
+  const baju = document.getElementById('baju').value.trim();
+  const prompt = 'Create a character reference sheet of the adult person in the attached photo. Keep the face exactly the same as in the photo. Layout: top row shows the full body from the front, the side, and the back; bottom row shows four head close-ups with neutral, smiling, surprised, and thinking expressions. Outfit: ' + (baju || 'the same clothes as in the photo') + '. Plain light grey studio background, even soft light, photorealistic, natural skin texture, no text, no labels.';
+  const t0 = Date.now();
+  try {
+    sheet = await callGeminiImageSafe(workModel, prompt, [photo]);
+    showImg('i3', sheet);
+    document.getElementById('d3').style.display = 'block';
+    setStatus('s3', '✅ Selesai dalam ' + Math.round((Date.now() - t0) / 1000) + ' detik. Periksa: apakah wajahnya mirip fotomu?', 'ok');
+    log('Character Sheet BERHASIL dengan ' + workModel + ' (' + Math.round((Date.now() - t0) / 1000) + ' detik)');
+  } catch (e) {
+    setStatus('s3', '❌ Gagal: ' + e.message, 'bad');
+    log('Character Sheet GAGAL: ' + e.message);
+  }
+  b.disabled = false;
+  updateButtons();
+}
+
+async function makeScene() {
+  const b = document.getElementById('b4'); b.disabled = true;
+  setStatus('s4', 'Sedang membuat gambar scene...');
+  const text = document.getElementById('scene').value.trim() + ' Keep the face, hair, and outfit exactly as in the attached character reference sheet. Show only one person.';
+  const t0 = Date.now();
+  try {
+    const img = await callGeminiImageSafe(workModel, text, [sheet]);
+    showImg('i4', img);
+    document.getElementById('d4').style.display = 'block';
+    setStatus('s4', '✅ Selesai dalam ' + Math.round((Date.now() - t0) / 1000) + ' detik. Periksa: wajah dan baju sama dengan Character Sheet? Rasionya vertikal?', 'ok');
+    log('Gambar scene BERHASIL (' + Math.round((Date.now() - t0) / 1000) + ' detik)');
+  } catch (e) {
+    setStatus('s4', '❌ Gagal: ' + e.message, 'bad');
+    log('Gambar scene GAGAL: ' + e.message);
+  }
+  b.disabled = false;
+}
+
+function download(imgId, name) {
+  const el = document.getElementById(imgId);
+  try {
+    const a = document.createElement('a');
+    a.href = el.src; a.download = 'sugistudio-' + name + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    log('Unduh ' + name + ' ditekan');
+  } catch (e) { log('Unduh gagal: ' + e.message); }
+}
+
+function copyLog(btn) {
+  const t = document.createElement('textarea');
+  t.value = 'LAPORAN UJI GAMBAR SUGI STUDIO\n' + navigator.userAgent + '\n\n' + document.getElementById('log').textContent;
+  document.body.appendChild(t); t.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(t);
+  btn.textContent = ok ? '✅ Tersalin' : '❌ Gagal, salin manual dari kotak di atas';
+  setTimeout(() => btn.textContent = '📋 Salin Laporan', 2000);
+}
+log('Aplikasi uji siap.');
+</script>
+</body>
+</html>
