@@ -5,7 +5,7 @@ const FILE = process.argv[2] || 'file:///home/user/Sugimation/hiburan.html';
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   const RAW = require('fs').readFileSync('/home/user/Sugimation/hiburan.html', 'utf8');
   await p.route('**/*', r => { const u = r.request().url(); if (u.startsWith('file:')) return r.continue(); if (u.startsWith('https://raw.githubusercontent.com')) return r.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, contentType: 'text/plain', body: RAW }); return r.abort(); });
-  await p.goto(FILE); await p.waitForFunction(() => typeof makeProjectCode === 'function' && document.querySelectorAll('#landing-themes button').length > 0);
+  await p.goto(FILE); await p.waitForFunction(() => typeof makeProjectCode === 'function' && document.querySelectorAll('#landing-themes button, #landing-examples button').length > 0);
   const out = [];
   const ok = (n, c, x = '') => out.push(`${c ? 'PASS' : 'FAIL'}  ${n}${x ? '  — ' + x : ''}`);
   ok('Kartu Lanjutkan Proyek tampil di beranda (riwayat kosong)', /Lanjutkan Proyek[\s\S]*Tempel Kode Proyek/i.test(await p.locator('#landing-container').innerText()));
@@ -24,7 +24,7 @@ const FILE = process.argv[2] || 'file:///home/user/Sugimation/hiburan.html';
   await p.waitForTimeout(800);
   ok('Tempel Kode Proyek (SGM1) membuka proyek', (await p.locator('#app-container').innerText()).includes('Hasil') && await p.evaluate(() => scenePrompts[1] === 'Prompt scene dua'));
   // kode tanpa kompresi (HP lama) dan kode yang terpotong
-  const code0 = await p.evaluate(() => { const j = JSON.stringify(Object.assign({ app: 'sugimation-hiburan', v: 1 }, buildProjectData())); return 'SGM0:' + b64FromBytes(new TextEncoder().encode(j)); });
+  const code0 = await p.evaluate(() => { const j = JSON.stringify(Object.assign({ app: (makeProjectCode.toString().match(/app: '([^']+)'/) || [])[1], v: 1 }, buildProjectData())); return 'SGM0:' + b64FromBytes(new TextEncoder().encode(j)); });
   await p.evaluate(c => { projectsHistory = []; resetProject(); openImportBox(); document.getElementById('import-text').value = c; importFromText(); }, code0);
   await p.waitForTimeout(600);
   ok('Tempel kode SGM0 (tanpa kompresi) juga bisa', await p.evaluate(() => scenePrompts[1] === 'Prompt scene dua'));

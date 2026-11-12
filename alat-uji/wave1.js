@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage();
-  await p.goto('file:///home/user/Sugimation/hiburan.html'); await p.waitForFunction(() => typeof getAutoChecks === 'function');
+  await p.goto(process.argv[2] || 'file:///home/user/Sugimation/hiburan.html'); await p.waitForFunction(() => typeof getAutoChecks === 'function');
   const r = await p.evaluate(() => {
     const U = 'Ringkasan: Cerita.\n\nInformasi wajib (tidak boleh hilang):\n- Penjaga warung menutup pintu warung\n- Pembeli misterius datang tengah malam\n\nKeputusan kreatif AI:\n- Lokasi desa';
     const run = (theme, scenes, o = {}) => {
