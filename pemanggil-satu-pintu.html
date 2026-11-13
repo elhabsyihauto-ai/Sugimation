@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!-- Sugi Studio AI - Pemanggil Satu Pintu V1.0. Tempel file ini di Gemini Canvas.
+     Mengambil 1 mesin bersama (sugi-core.js) + 5 file data seri dari GitHub, lalu menjalankannya berurutan.
+     Tanpa document.write, dan hanya berjalan sekali. Dirakit oleh satu-pintu/rakit.py di repo dapur. -->
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sugi Studio AI - Satu Pintu</title>
+<style id="pemanggil-gaya">
+  #pemanggil { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #FAF3E3; color: #3B2A1A; font-family: system-ui, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+  #pemanggil .spin { width: 40px; height: 40px; border: 4px solid #E9DCC2; border-top-color: #C9A24D; border-radius: 50%; animation: pemanggil-s 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes pemanggil-s { to { transform: rotate(360deg); } }
+  #pemanggil button { margin-top: 16px; background: #C9A24D; color: #3B2A1A; border: 0; border-radius: 14px; padding: 12px 24px; font-weight: 700; font-size: 16px; }
+  #pemanggil small { display: block; font-size: 12px; opacity: .7; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="pemanggil"><div><div class="spin"></div><p>Memuat Sugi Studio AI...</p><small id="pemanggil-info"></small></div></div>
+<script>
+(function () {
+  // Pengaman: pemanggil hanya berjalan sekali
+  if (window.__sugiSatuPintuDimuat) return;
+  window.__sugiSatuPintuDimuat = true;
+
+  var DASAR = "https://raw.githubusercontent.com/elhabsyihauto-ai/Sugimation/ccr-afc6f402-odd8d2/satu-pintu/";
+  var FILES = ["sugi-core.js", "seri-hiburan.js", "seri-edukasi.js", "seri-cuan-iklan.js", "seri-serba-bisa.js", "seri-kreator.js"]; // file pertama (mesin bersama) wajib ada
+
+  function info(t) { var el = document.getElementById("pemanggil-info"); if (el) el.textContent = t; }
+  function tampilGagal(pesan) {
+    var box = document.getElementById("pemanggil");
+    if (!box) return;
+    box.innerHTML = "<div><p><b>Aplikasi gagal dimuat.</b><br>Periksa koneksi internet, lalu coba lagi.</p><p style='font-size:12px;opacity:.7'>" + String(pesan).replace(/</g, "&lt;") + "</p><button id='pemanggil-ulang'>Coba lagi</button></div>";
+    document.getElementById("pemanggil-ulang").onclick = function () {
+      box.innerHTML = "<div><div class='spin'></div><p>Memuat Sugi Studio AI...</p><small id='pemanggil-info'></small></div>";
+      muat();
+    };
+  }
+  async function ambil(nama, versi) {
+    var t0 = Date.now();
+    try {
+      var res = await fetch(DASAR + nama + "?v=" + versi, { cache: "no-store" });
+      if (!res.ok) throw new Error("Kode " + res.status);
+      var teks = await res.text();
+      return { file: nama, ok: true, teks: teks, bytes: teks.length, ms: Date.now() - t0 };
+    } catch (e) {
+      return { file: nama, ok: false, error: e.message || String(e), ms: Date.now() - t0 };
+    }
+  }
+  function jalankan(h) {
+    var s = document.createElement("script");
+    s.setAttribute("data-file", h.file);
+    s.textContent = h.teks + "\n//# sourceURL=" + h.file;
+    document.body.appendChild(s);
+    s.remove();
+  }
+  async function muat() {
+    var t0 = Date.now(), versi = Date.now();
+    try {
+      info("Mengambil " + FILES.length + " file...");
+      // Ambil semua file bersamaan, lalu jalankan berurutan (mesin bersama dulu)
+      var hasil = await Promise.all(FILES.map(function (f) { return ambil(f, versi); }));
+      if (!hasil[0].ok) throw new Error(hasil[0].file + ": " + hasil[0].error);
+      info("Menyiapkan aplikasi...");
+      jalankan(hasil[0]);
+      if (!window.SugiCore) throw new Error("Mesin bersama gagal dijalankan");
+      for (var i = 1; i < hasil.length; i++) { if (hasil[i].ok) jalankan(hasil[i]); delete hasil[i].teks; }
+      delete hasil[0].teks;
+      var gaya = document.getElementById("pemanggil-gaya"); if (gaya) gaya.remove();
+      window.SugiCore.mulai({ files: hasil, totalMs: Date.now() - t0 });
+    } catch (e) {
+      tampilGagal(e.message || e);
+    }
+  }
+  muat();
+})();
+</script>
+</body>
+</html>

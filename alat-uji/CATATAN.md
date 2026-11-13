@@ -75,3 +75,8 @@ Jalankan dari folder kerja sementara (bukan dari repo). Chromium + Playwright su
 - `closeModal` menambah `hidden` setelah 200 ms: jangan buka pesan baru tepat setelah menutup.
 - `CHANGE_RE` sengaja melewati cek cahaya/posisi jika scene menyebut perubahan ("walks in", "turns off"): naskah contoh harus netral.
 - Pemeriksaan otomatis baru wajar menandai naskah tiruan yang tidak punya `Card:`, Coverage, atau Callback: saring sesuai yang sedang diuji.
+
+## Sugi Studio Satu Pintu (sejak 13 Nov 2026)
+- `pemanggil-satu-pintu.html` + folder `satu-pintu/` (`sugi-core.js` dan `seri-*.js`) adalah **hasil rakitan otomatis** dari kelima aplikasi di repo ini. Perakitnya ada di repo dapur (`elhabsyihauto-ai/sugi-studio-dapur`, folder `satu-pintu/`). Jangan edit file di `satu-pintu/` secara langsung.
+- Setiap kali salah satu dari kelima aplikasi berubah di `main`, jalankan ulang `python3 satu-pintu/rakit.py --cabang main` dari repo dapur, lalu commit hasilnya di sini.
+- Kelima aplikasi dan pemanggil lamanya tetap dipakai member seperti biasa.
