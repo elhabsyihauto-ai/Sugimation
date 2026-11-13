@@ -13,6 +13,8 @@ const FILE = process.argv[2] || 'file:///home/user/Sugimation/hiburan.html';
       'SALAH: ucapan diubah': run(['Rani says "Kamu dengar suara aneh itu juga, kan?" Avoid: music.', ok2]),
       'SALAH: kata Indonesia di luar ucapan ("gemetar")': run(['Rani, gemetar, says "Kamu dengar suara itu juga, kan?" Avoid: music.', ok2]),
       'SALAH: prompt 600 kata': run([ok1 + ' detail'.repeat(600), ok2]),
+      'Coverage: penjelasan konsep oleh narator (tidak ditandai)': run([ok1, ok2], '- Penjelasan konsep tabungan -> Scene 1: Narrator says the idea of saving'),
+      'SALAH: Coverage peristiwa hanya oleh narator': run([ok1, ok2], '- Pembeli datang -> Scene 1: Narrator says a buyer came'),
       'Coverage: aksi terlihat sambil bicara': run([ok1, ok2], '- Budi membuka pintu -> Scene 2: Budi opens the door and says "Siapa?"'),
       'Coverage: narator di akhir aksi': run([ok1, ok2], '- Rani menutup warung -> Scene 1: Rani closes the shop shutter while the narrator describes the night'),
       'SALAH: Coverage "Narrator says ..."': run([ok1, ok2], '- Pembeli datang -> Scene 2: Narrator says a buyer came at midnight'),
