@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!-- Sugi Studio Satu Pintu - Pemanggil Uji V1 (13 Nov 2026). Tempel file ini di Gemini Canvas.
+     Uji kecil langkah 1: pemanggil mengambil BEBERAPA file dari GitHub (1 mesin bersama + 2 file data seri + 1 file gaya),
+     lalu menjalankannya berurutan. Tanpa document.write, dan hanya berjalan sekali. Tidak mengubah 5 aplikasi lama. -->
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sugi Studio Satu Pintu - Uji</title>
+<style id="pemanggil-gaya">
+  #pemanggil { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #FAF3E3; color: #3B2A1A; font-family: system-ui, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+  #pemanggil .spin { width: 40px; height: 40px; border: 4px solid #E9DCC2; border-top-color: #C9A24D; border-radius: 50%; animation: pemanggil-s 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes pemanggil-s { to { transform: rotate(360deg); } }
+  #pemanggil button { margin-top: 16px; background: #C9A24D; color: #3B2A1A; border: 0; border-radius: 14px; padding: 12px 24px; font-weight: 700; font-size: 16px; }
+  #pemanggil small { display: block; font-size: 12px; opacity: .7; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="pemanggil"><div><div class="spin"></div><p>Memuat Sugi Studio Satu Pintu...</p><small id="pemanggil-info"></small></div></div>
+<script>
+(function () {
+  // Pengaman: pemanggil hanya berjalan sekali
+  if (window.__sugiSatuPintuDimuat) return;
+  window.__sugiSatuPintuDimuat = true;
+
+  // Lokasi file di GitHub. Selama uji, file ada di cabang uji (bukan main), jadi aplikasi member tidak tersentuh.
+  var DASAR = "https://raw.githubusercontent.com/elhabsyihauto-ai/Sugimation/ccr-afc6f402-odd8d2/uji-satu-pintu/";
+  // Urutan penting: gaya dulu, lalu mesin bersama, lalu file data seri. "wajib" = aplikasi tidak bisa jalan tanpanya.
+  var FILES = [
+    { nama: "gaya.css", wajib: false },
+    { nama: "inti.js", wajib: true },
+    { nama: "data-hiburan.js", wajib: false },
+    { nama: "data-edukasi.js", wajib: false }
+  ];
+
+  function info(t) { var el = document.getElementById("pemanggil-info"); if (el) el.textContent = t; }
+
+  function tampilGagal(pesan) {
+    var box = document.getElementById("pemanggil");
+    if (!box) return;
+    box.innerHTML = "<div><p><b>Aplikasi gagal dimuat.</b><br>Periksa koneksi internet, lalu coba lagi.</p><p style='font-size:12px;opacity:.7'>" + String(pesan).replace(/</g, "&lt;") + "</p><button id='pemanggil-ulang'>Coba lagi</button></div>";
+    document.getElementById("pemanggil-ulang").onclick = function () {
+      box.innerHTML = "<div><div class='spin'></div><p>Memuat Sugi Studio Satu Pintu...</p><small id='pemanggil-info'></small></div>";
+      muat();
+    };
+  }
+
+  // Ambil satu file sebagai teks dan catat ukuran serta lamanya
+  async function ambil(f, versi) {
+    var t0 = Date.now();
+    try {
+      var res = await fetch(DASAR + f.nama + "?v=" + versi, { cache: "no-store" });
+      if (!res.ok) throw new Error("Kode " + res.status);
+      var teks = await res.text();
+      return { file: f.nama, wajib: f.wajib, ok: true, teks: teks, bytes: teks.length, ms: Date.now() - t0 };
+    } catch (e) {
+      return { file: f.nama, wajib: f.wajib, ok: false, error: e.message || String(e), ms: Date.now() - t0 };
+    }
+  }
+
+  async function muat() {
+    var t0 = Date.now(), versi = Date.now();
+    try {
+      info("Mengambil " + FILES.length + " file...");
+      // 1) Ambil semua file bersamaan (lebih cepat), lalu jalankan berurutan
+      var hasil = await Promise.all(FILES.map(function (f) { return ambil(f, versi); }));
+      var gagalWajib = hasil.filter(function (h) { return !h.ok && h.wajib; });
+      if (gagalWajib.length) throw new Error(gagalWajib.map(function (h) { return h.file + ": " + h.error; }).join("; "));
+
+      // 2) Pasang gaya dan jalankan script, satu per satu
+      for (var i = 0; i < hasil.length; i++) {
+        var h = hasil[i];
+        if (!h.ok) continue;
+        info("Menjalankan " + h.file + "...");
+        try {
+          if (/\.css$/.test(h.file)) {
+            var st = document.createElement("style"); st.setAttribute("data-file", h.file); st.textContent = h.teks; document.head.appendChild(st);
+          } else {
+            var s = document.createElement("script"); s.setAttribute("data-file", h.file); s.textContent = h.teks + "\n//# sourceURL=" + h.file; document.body.appendChild(s);
+          }
+        } catch (e) { h.ok = false; h.error = "Gagal dijalankan: " + (e.message || e); }
+        if (h.wajib && !window.SugiInti) throw new Error(h.file + " gagal dijalankan");
+        delete h.teks;
+      }
+
+      // 3) Serahkan ke mesin bersama
+      var gaya = document.getElementById("pemanggil-gaya"); if (gaya) gaya.remove();
+      window.SugiInti.mulai({ files: hasil, totalMs: Date.now() - t0, dasar: DASAR });
+    } catch (e) {
+      tampilGagal(e.message || e);
+    }
+  }
+  muat();
+})();
+</script>
+</body>
+</html>
