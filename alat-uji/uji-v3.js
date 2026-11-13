@@ -1,5 +1,6 @@
 // Uji alur V3.0 untuk semua aplikasi: landing -> cabang/contoh -> wizard -> hasil, dengan jawaban Gemini tiruan.
 // Pakai: node uji-v3.js file:///home/user/Sugimation/<app>.html ["'komedi',0"]   (argumen ke-2 opsional: saring tombol landing)
+// POST=file.js menjalankan isi file (fungsi async, boleh return) di halaman setelah hasil jadi.
 // JALUR=atur untuk jalur "Atur sendiri" (semua tahap); bawaan jalur "Cepat". VERB=1 menampilkan setiap tahap.
 // Bisa lewat pemanggil: isi aplikasi untuk raw.githubusercontent.com dibaca dari file di repo.
 const { chromium } = require('playwright');
@@ -85,6 +86,7 @@ async function drive(page, st) {
       const core = ['master assets', 'Location Reference Prompt', 'Storyboard and Script', 'Camera and Lighting Plan', 'scene-1', 'qc'].filter(k => !new RegExp(k, 'i').test(q));
       const res = await page.locator('#app-container').innerText();
       const auto = await page.evaluate(() => getQcDisplay().includes('PEMERIKSAAN OTOMATIS') + ' / ' + getAutoChecks().length + ' temuan');
+      if (process.env.POST) out.push('POST: ' + JSON.stringify(await page.evaluate(new Function('return (async () => {' + require('fs').readFileSync(process.env.POST, 'utf8') + '})()'))));
       out.push(`[raw=${st.raw || 0} writes=${await page.evaluate(() => window.__writes)} title=${await page.title()}] `);
       out.push(`${core.length || st.errors.length ? 'FAIL' : 'PASS'}  ${s}: ${[...new Set(seen.filter(Boolean))].join(' › ')}\n        antrean: ${q}${core.length ? '\n        HILANG: ' + core : ''}${st.errors.length ? '\n        ERROR: ' + st.errors.join(' | ') : ''}${st.unknown.length ? '\n        JSON tak dikenal: ' + st.unknown.join(' ; ') : ''}  autocheck=${auto}`);
     } catch (e) { out.push(`FAIL  ${s}: ${e.message.split('\n')[0]}${st.errors.length ? ' ERROR: ' + st.errors.join(' | ') : ''}`); }
