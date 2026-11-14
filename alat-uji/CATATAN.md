@@ -80,3 +80,7 @@ Jalankan dari folder kerja sementara (bukan dari repo). Chromium + Playwright su
 - `pemanggil-satu-pintu.html` + folder `satu-pintu/` (`sugi-core.js` dan `seri-*.js`) adalah **hasil rakitan otomatis** dari kelima aplikasi di repo ini. Perakitnya ada di repo dapur (`elhabsyihauto-ai/sugi-studio-dapur`, folder `satu-pintu/`). Jangan edit file di `satu-pintu/` secara langsung.
 - Setiap kali salah satu dari kelima aplikasi berubah di `main`, jalankan ulang `python3 satu-pintu/rakit.py --cabang main` dari repo dapur, lalu commit hasilnya di sini.
 - Kelima aplikasi dan pemanggil lamanya tetap dipakai member seperti biasa.
+
+## Perbaikan V3.2 dan V3.3 (14-15 Nov 2026)
+- Sejak V3.2, perbaikan dikerjakan langsung pada kelima file di repo ini lewat skrip di repo dapur (`perbaikan/k28_k63.py`, lalu `perbaikan/k64_k72.py` untuk V3.3). Skrip membaca salinan V3.1 di `perbaikan/asal/` dan menulis ulang kelima file di sini, jadi bisa diulang.
+- Kalau file di sini diedit tangan, salin dulu perubahannya ke skrip dapur. Kalau tidak, perubahan itu hilang saat skrip dijalankan lagi.
