@@ -412,21 +412,49 @@ var DATA = {"versi":"V1.7","dirakit":"15 Nov 2026 dari Hiburan V3.6, Edukasi V3.
     $("sp-seri").appendChild(f);
   }
 
-  // Panggilan AI dari bingkai dijalankan oleh halaman utama, jawabannya dikembalikan ke bingkai.
-  function pasangPerantara(w) {
-    var asli = w.fetch;
-    w.fetch = function (url, opsi) {
+  // Panggilan AI dari bingkai dititipkan ke halaman utama LEWAT PESAN (postMessage), persis seperti uji Canvas
+  // yang berhasil. Memanggil fetch halaman utama langsung dari bingkai tetap ditolak Canvas (403), jadi
+  // pengirim pesan harus kode milik bingkai sendiri, dan fetch dijalankan oleh pendengar pesan di halaman utama.
+  var PERANTARA = "(" + function () {
+    var n = 0, tunggu = {}, asli = window.fetch;
+    window.addEventListener("message", function (e) {
+      var d = e.data || {};
+      if (e.source !== window.parent || d.jenis !== "sugi-jawab-ai" || !tunggu[d.id]) return;
+      var p = tunggu[d.id]; delete tunggu[d.id];
+      if (d.galat) p[1](new TypeError(d.galat));
+      else p[0](new Response(d.isi, { status: d.status, statusText: d.statusText || "", headers: { "Content-Type": d.tipe || "application/json" } }));
+    });
+    window.fetch = function (url, opsi) {
       var u = typeof url === "string" ? url : (url && url.url) || String(url);
-      if (!/^https:\/\/generativelanguage\.googleapis\.com\//.test(u)) return asli.apply(w, arguments);
+      if (!/^https:\/\/generativelanguage\.googleapis\.com\//.test(u)) return asli.apply(window, arguments);
       opsi = opsi || {};
-      var o = { method: opsi.method || "POST", headers: Object.assign({}, opsi.headers || {}), body: opsi.body };
-      return window.fetch(u, o).then(function (r) {
-        return r.text().then(function (t) {
-          return new w.Response(t, { status: r.status, statusText: r.statusText, headers: { "Content-Type": r.headers.get("Content-Type") || "application/json" } });
-        });
-      }, function (e) { throw new w.TypeError(String((e && e.message) || e || "Failed to fetch")); });
+      var h = {}, hh = opsi.headers || {};
+      if (typeof hh.forEach === "function" && !Array.isArray(hh)) hh.forEach(function (v, k) { h[k] = v; });
+      else Object.keys(hh).forEach(function (k) { h[k] = hh[k]; });
+      return new Promise(function (ok, gagal) {
+        var id = ++n; tunggu[id] = [ok, gagal];
+        window.parent.postMessage({ jenis: "sugi-minta-ai", id: id, url: u, opsi: { method: opsi.method || "POST", headers: h, body: opsi.body } }, "*");
+      });
     };
+  } + ")();";
+  function pasangPerantara(w) {
+    var s = w.document.createElement("script");
+    s.textContent = PERANTARA + "\n//# sourceURL=sugi-perantara.js";
+    w.document.head.appendChild(s);
   }
+  window.addEventListener("message", function (e) {
+    var d = e.data || {};
+    if (d.jenis !== "sugi-minta-ai") return;
+    var src = e.source;
+    if (!kerja.some(function (k) { return k.w === src; })) return;
+    fetch(d.url, d.opsi).then(function (r) {
+      return r.text().then(function (t) {
+        src.postMessage({ jenis: "sugi-jawab-ai", id: d.id, status: r.status, statusText: r.statusText, isi: t, tipe: r.headers.get("Content-Type") }, "*");
+      });
+    }).catch(function (er) {
+      try { src.postMessage({ jenis: "sugi-jawab-ai", id: d.id, galat: String((er && er.message) || er || "Failed to fetch") }, "*"); } catch (x) { }
+    });
+  });
 
   // Simpanan dari bingkai: Riwayat proyek digabung (proyek dari bingkai lain tidak tertimpa),
   // lalu ditulis lewat halaman utama supaya ikut tersimpan ke akun.
