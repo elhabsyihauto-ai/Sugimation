@@ -22,6 +22,10 @@
   window.__sugimationDimuat = true;
 
   var SUMBER = "https://raw.githubusercontent.com/elhabsyihauto-ai/Sugimation/main/kreator.html";
+  // K88: penanda untuk Canvas: aplikasi ini memakai AI Gemini (kunci kosong, disediakan Canvas).
+  // Di aplikasi Gemini, AI tidak dinyalakan untuk Canvas yang kodenya tidak menyebut alamat AI ini.
+  var apiKey = "";
+  var GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=" + apiKey;
 
   function tampilGagal(pesan) {
     var box = document.getElementById("pemanggil");
