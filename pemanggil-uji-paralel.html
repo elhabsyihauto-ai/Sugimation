@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!-- Sugi Studio AI - Uji kecil K75 (kerja paralel), 16 Nov 2026. Tempel seluruh file ini di Gemini Canvas. Tidak memuat apa pun dari internet selain AI Gemini. -->
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uji Kerja Paralel</title>
+<style>
+  body { margin: 0; font-family: system-ui, Roboto, sans-serif; background: linear-gradient(135deg, #FAF3E3, #F3E7CC); color: #3B2A1A; padding: 16px; }
+  .kotak { max-width: 520px; margin: 0 auto; background: #FFFDF8; border: 1px solid #E6D5B8; border-radius: 20px; padding: 16px; }
+  h1 { font-family: Georgia, serif; font-size: 22px; margin: 0 0 6px; }
+  p { font-size: 14px; line-height: 1.5; color: #5C4630; margin: 0 0 10px; }
+  button { width: 100%; min-height: 48px; border-radius: 14px; border: 1px solid #8A6420; font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; color: #3A2508; margin-top: 8px;
+    background: linear-gradient(135deg, #8A6420 0%, #C99A3B 18%, #F6E3A1 38%, #FFF6D2 47%, #E2B95A 58%, #A87B2A 78%, #D9AE52 100%); }
+  button.kedua { background: #FAF3E3; border-color: #E6D5B8; }
+  ol { padding-left: 20px; margin: 12px 0 0; }
+  li { font-size: 14px; margin-bottom: 8px; line-height: 1.45; }
+  li small { display: block; color: #8A6E4B; font-size: 12px; word-break: break-word; }
+  iframe { display: none; }
+</style>
+</head>
+<body>
+<div class="kotak">
+  <h1>🧪 Uji Kerja Paralel (K75)</h1>
+  <p>Uji ini mengecek apakah AI tetap bisa bekerja dari dalam "bingkai" terpisah. Itu syarat supaya proyek yang ditinggal tetap berjalan saat kamu pindah ke proyek lain. Ketuk tombol di bawah, tunggu sekitar 1 menit, lalu ketuk <b>Salin hasil</b> dan kirim ke Claude.</p>
+  <button id="mulai">▶️ Mulai uji</button>
+  <ol id="hasil"></ol>
+  <button id="salin" class="kedua" style="display:none">📋 Salin hasil</button>
+</div>
+<script>
+(function () {
+  var MODEL = "gemini-3-flash-preview", GAMBAR = "gemini-2.5-flash-image-preview";
+  var URL_AI = function (m) { return "https://generativelanguage.googleapis.com/v1beta/models/" + m + ":generateContent?key="; };
+  var hasil = document.getElementById("hasil"), baris = {};
+  function tulis(id, judul, status, catatan) {
+    var li = baris[id]; if (!li) { li = document.createElement("li"); hasil.appendChild(li); baris[id] = li; }
+    li.innerHTML = (status === true ? "✅ " : status === false ? "❌ " : "⏳ ") + judul + (catatan ? "<small>" + String(catatan).replace(/[<>&]/g, "") + "</small>" : "");
+    li.setAttribute("data-teks", (status === true ? "OK" : status === false ? "GAGAL" : "...") + " | " + judul + (catatan ? " | " + catatan : ""));
+  }
+  async function tanyaTeks(f) {
+    var res = await f(URL_AI(MODEL), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: "Jawab satu kata saja: halo" }] }] }) });
+    var j = await res.json(); if (!res.ok) throw new Error("HTTP " + res.status + " " + JSON.stringify(j).slice(0, 120));
+    return (((j.candidates || [])[0] || {}).content || { parts: [] }).parts.map(function (x) { return x.text || ""; }).join("").trim().slice(0, 40);
+  }
+  // Perantara: bingkai meminta halaman utama melakukan panggilan AI
+  window.addEventListener("message", async function (e) {
+    var d = e.data || {}; if (d.jenis !== "minta-ai") return;
+    try { var r = await fetch(d.url, d.opsi); var t = await r.text(); e.source.postMessage({ jenis: "jawab-ai", id: d.id, ok: r.ok, status: r.status, isi: t }, "*"); }
+    catch (er) { e.source.postMessage({ jenis: "jawab-ai", id: d.id, ok: false, status: 0, isi: String(er.message || er) }, "*"); }
+  });
+  var ISI_BINGKAI = "<!DOCTYPE html><html><body><script>(" + function () {
+    var MODEL = "gemini-3-flash-preview", GAMBAR = "gemini-2.5-flash-image-preview";
+    var URL_AI = function (m) { return "https://generativelanguage.googleapis.com/v1beta/models/" + m + ":generateContent?key="; };
+    var n = 0, tunggu = {};
+    window.addEventListener("message", function (e) { var d = e.data || {}; if (d.jenis === "jawab-ai" && tunggu[d.id]) { tunggu[d.id](d); delete tunggu[d.id]; } if (d.jenis === "mulai") jalan(d.nama); });
+    function lewatInduk(url, opsi) { return new Promise(function (ok) { var id = ++n; tunggu[id] = ok; parent.postMessage({ jenis: "minta-ai", id: id, url: url, opsi: opsi }, "*"); }); }
+    function lapor(uji, ok, cat) { parent.postMessage({ jenis: "lapor", uji: uji, ok: ok, cat: cat }, "*"); }
+    async function jalan(nama) {
+      var badan = JSON.stringify({ contents: [{ parts: [{ text: "Jawab satu kata saja: halo" }] }] });
+      try { var r = await fetch(URL_AI(MODEL), { method: "POST", headers: { "Content-Type": "application/json" }, body: badan }); var t = await r.text(); lapor(nama + "-langsung", r.ok, "HTTP " + r.status + " " + t.slice(0, 90)); }
+      catch (er) { lapor(nama + "-langsung", false, String(er.message || er)); }
+      var d = await lewatInduk(URL_AI(MODEL), { method: "POST", headers: { "Content-Type": "application/json" }, body: badan });
+      lapor(nama + "-perantara", d.ok, "HTTP " + d.status + " " + String(d.isi).slice(0, 90));
+      if (nama === "A") {
+        var bg = JSON.stringify({ contents: [{ parts: [{ text: "A small golden star icon on a cream background" }] }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } });
+        var g = await lewatInduk(URL_AI(GAMBAR), { method: "POST", headers: { "Content-Type": "application/json" }, body: bg });
+        lapor("A-gambar", g.ok && /inlineData|inline_data/.test(g.isi), "HTTP " + g.status + (g.ok ? (/inlineData|inline_data/.test(g.isi) ? " gambar diterima" : " tanpa gambar") : " " + String(g.isi).slice(0, 90)));
+        try { localStorage.setItem("uji", "1"); lapor("A-simpan", localStorage.getItem("uji") === "1", "localStorage di bingkai"); } catch (er) { lapor("A-simpan", false, String(er.message || er)); }
+      }
+      lapor(nama + "-selesai", true, "");
+    }
+    parent.postMessage({ jenis: "siap" }, "*");
+  } + ")();<\/script></body></html>";
+  var JUDUL = { "A-langsung": "Bingkai A: AI teks langsung dari bingkai", "A-perantara": "Bingkai A: AI teks lewat halaman utama", "A-gambar": "Bingkai A: AI gambar lewat halaman utama",
+    "A-simpan": "Bingkai A: penyimpanan di bingkai", "B-langsung": "Bingkai B: AI teks langsung (berjalan bersamaan)", "B-perantara": "Bingkai B: AI teks lewat halaman utama (bersamaan)" };
+  window.addEventListener("message", function (e) {
+    var d = e.data || {}; if (d.jenis !== "lapor" || /-selesai$/.test(d.uji)) return;
+    tulis(d.uji, JUDUL[d.uji] || d.uji, d.ok, d.cat);
+  });
+  document.getElementById("mulai").onclick = async function () {
+    this.disabled = true; this.textContent = "⏳ Sedang menguji...";
+    tulis("utama", "Halaman utama: AI teks (pembanding)", null);
+    try { var t = await tanyaTeks(fetch.bind(window)); tulis("utama", "Halaman utama: AI teks (pembanding)", true, "jawaban: " + t); } catch (er) { tulis("utama", "Halaman utama: AI teks (pembanding)", false, er.message); }
+    ["A", "B"].forEach(function (nama) {
+      var f = document.createElement("iframe"); f.setAttribute("sandbox", "allow-scripts allow-same-origin"); f.srcdoc = ISI_BINGKAI; document.body.appendChild(f);
+      f.onload = function () { f.contentWindow.postMessage({ jenis: "mulai", nama: nama }, "*"); };
+    });
+    setTimeout(function () { document.getElementById("mulai").textContent = "✅ Uji selesai"; document.getElementById("salin").style.display = "block"; }, 45000);
+  };
+  document.getElementById("salin").onclick = function () {
+    var teks = "Hasil uji kerja paralel (K75):\n" + Array.prototype.map.call(hasil.children, function (li) { return li.getAttribute("data-teks"); }).join("\n");
+    var b = this, ok = function () { b.textContent = "✅ Tersalin"; };
+    try { navigator.clipboard.writeText(teks).then(ok, function () { cadang(); }); } catch (e) { cadang(); }
+    function cadang() { var a = document.createElement("textarea"); a.value = teks; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); ok(); } catch (e) { } document.body.removeChild(a); }
+  };
+})();
+</script>
+</body>
+</html>

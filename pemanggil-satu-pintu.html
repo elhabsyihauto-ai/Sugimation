@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Sugi Studio AI - Pemanggil Satu Pintu V1.5. Tempel file ini di Gemini Canvas.
+<!-- Sugi Studio AI - Pemanggil Satu Pintu V1.6. Tempel file ini di Gemini Canvas.
      Mengambil 1 mesin bersama (sugi-core.js) + 5 file data seri dari GitHub, lalu menjalankannya berurutan.
      Tanpa document.write, dan hanya berjalan sekali. Dirakit oleh satu-pintu/rakit.py di repo dapur. -->
 <html lang="id">
@@ -23,7 +23,7 @@
   if (window.__sugiSatuPintuDimuat) return;
   window.__sugiSatuPintuDimuat = true;
 
-  var DASAR = "https://raw.githubusercontent.com/elhabsyihauto-ai/Sugimation/main/satu-pintu/";
+  var DASAR = "https://raw.githubusercontent.com/elhabsyihauto-ai/Sugimation/ccr-afc6f402-odd8d2/satu-pintu/";
   var FILES = ["sugi-core.js", "seri-hiburan.js", "seri-edukasi.js", "seri-cuan-iklan.js", "seri-serba-bisa.js", "seri-kreator.js"]; // file pertama (mesin bersama) wajib ada
 
   function info(t) { var el = document.getElementById("pemanggil-info"); if (el) el.textContent = t; }
